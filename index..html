@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>OB Battle: Rescate Materno</title>
+<style>
+:root{--wine:#800020;--pink:#f2d4de;--paper:#fff7fa;--ink:#3c1725;--muted:#794858}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:linear-gradient(135deg,#f4dce4,#e7bacb 58%,#d99cb4);color:var(--ink)}
+body{padding:10px}.app{max-width:1100px;margin:auto}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:7px 4px 12px}
+.brand{display:flex;align-items:center;gap:10px}.logo{font-size:2.2rem}
+h1{font-size:clamp(1.25rem,3.5vw,2rem);margin:0;color:var(--wine)}.sub{margin:2px 0 0;font-size:.9rem;color:var(--muted)}
+.tags{display:flex;gap:7px;flex-wrap:wrap}.tag{border-radius:999px;background:#fff7fa;padding:7px 10px;font-weight:700;color:var(--wine);font-size:.82rem;border:1px solid #d8a0b4}
+.game-shell{background:var(--paper);border:2px solid #bf718d;border-radius:22px;padding:10px;box-shadow:0 12px 32px #6f26421a}
+.hud{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:2px 2px 10px}.stat{background:#f0d5df;border-radius:12px;padding:8px 10px;min-width:0}
+.stat small{display:block;color:#784456;font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em}.stat strong{font-size:1rem;color:var(--wine)}
+.healthbar{height:7px;background:#dfb6c5;border-radius:99px;overflow:hidden;margin-top:5px}.healthfill{height:100%;width:100%;background:#4aa77c;transition:width .15s}
+.stage{position:relative;border-radius:15px;overflow:hidden;background:#35111f;border:2px solid #9d4967;line-height:0}
+canvas{display:block;width:100%;height:auto;touch-action:none}
+.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:18px;background:#211421b8;color:white;text-align:center;line-height:1.4}.overlay.hidden{display:none}
+.dialog{max-width:510px;background:#fff8fb;color:var(--ink);border:2px solid #c97f9a;border-radius:20px;padding:clamp(16px,4vw,28px);box-shadow:0 12px 36px #1d071b55}
+.dialog h2{margin:0 0 8px;color:var(--wine);font-size:clamp(1.4rem,4vw,2rem)}.dialog p{margin:8px 0 14px}
+.rowbuttons{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}.primary,.secondary{border:0;border-radius:13px;padding:12px 17px;font:inherit;font-weight:800;cursor:pointer}
+.primary{background:var(--wine);color:white}.secondary{background:#ebc4d2;color:var(--wine)}
+.below{display:grid;grid-template-columns:1.2fr 1fr;gap:10px;margin-top:10px}.help{border-radius:15px;background:#f1dce4;padding:12px 14px;font-size:.9rem;line-height:1.45}.help strong{color:var(--wine)}
+.controls-mobile{display:none;margin-top:10px;grid-template-columns:1fr auto;gap:10px;align-items:center}.pad{display:grid;grid-template-columns:repeat(3,46px);grid-template-rows:repeat(2,42px);gap:5px}
+.pad button,.fire{touch-action:none;border:1px solid #bf718d;background:#e7bdcd;color:var(--wine);border-radius:12px;font-weight:900;font-size:1.05rem}
+.pad .up{grid-column:2}.pad .left{grid-column:1;grid-row:2}.pad .down{grid-column:2;grid-row:2}.pad .right{grid-column:3;grid-row:2}
+.fire{min-height:88px;min-width:95px;background:var(--wine);color:white;padding:8px}
+footer{text-align:center;padding:12px 5px 4px;color:#714052;font-size:.78rem}
+select{font:inherit;padding:8px;border-radius:10px;border:1px solid #bf718d;background:white;color:#57293f}
+@media(max-width:680px){body{padding:6px}.hud{grid-template-columns:repeat(2,1fr)}.below{grid-template-columns:1fr}.controls-mobile{display:grid}.tag{font-size:.75rem}.game-shell{padding:7px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+ <div class="brand"><div class="logo" aria-hidden="true">🩺🌸</div><div><h1>OB BATTLE: RESCATE MATERNO</h1><p class="sub">Arena de supervivencia · edición obstetricia</p></div></div>
+ <div class="tags"><span class="tag">🎮 Offline</span><span class="tag">👩‍⚕️ Obstetra</span><span class="tag">👨‍⚕️ Médico</span></div>
+</header>
+<section class="game-shell">
+ <div class="hud">
+  <div class="stat"><small>❤️ Energía</small><strong id="healthText">100 / 100</strong><div class="healthbar"><div id="healthFill" class="healthfill"></div></div></div>
+  <div class="stat"><small>🤖 Bots superados</small><strong id="kills">0</strong></div>
+  <div class="stat"><small>🧰 Botiquines</small><strong id="medkits">0</strong></div>
+  <div class="stat"><small>⏱️ Tiempo</small><strong id="time">00:00</strong></div>
+ </div>
+ <div class="stage">
+  <canvas id="game" width="960" height="540" aria-label="Campo de juego"></canvas>
+  <div id="overlay" class="overlay">
+   <div class="dialog">
+    <div style="font-size:3rem">👩‍⚕️ 🧑‍⚕️ 🏥</div>
+    <h2 id="overlayTitle">¡Entra a la arena!</h2>
+    <p id="overlayText">Elige tu personaje y sobrevive a los bots de entrenamiento. Muévete, apunta, recoge botiquines y mantente en movimiento.</p>
+    <p><strong>Personaje:</strong> <select id="character"><option value="obstetra">Obstetra Ana 👩‍⚕️</option><option value="medico">Doctor Mateo 👨‍⚕️</option></select></p>
+    <div class="rowbuttons"><button id="startBtn" class="primary">▶ JUGAR</button><button id="restartBtn" class="secondary" style="display:none">↻ Volver a jugar</button></div>
+   </div>
+  </div>
+ </div>
+ <div class="controls-mobile" aria-label="Controles táctiles">
+  <div class="pad">
+   <button class="up" data-key="up" aria-label="Arriba">▲</button><button class="left" data-key="left" aria-label="Izquierda">◀</button><button class="down" data-key="down" aria-label="Abajo">▼</button><button class="right" data-key="right" aria-label="Derecha">▶</button>
+  </div>
+  <button id="fireMobile" class="fire">🎯<br>DISPARAR</button>
+ </div>
+ <div class="below">
+  <div class="help"><strong>⌨️ Controles de computadora</strong><br>W A S D o flechas: moverte. Mueve el mouse para apuntar y mantén clic para disparar; también puedes mantener la barra espaciadora.</div>
+  <div class="help"><strong>🎯 Tu misión</strong><br>Supera los bots de entrenamiento, recoge botiquines verdes para recuperar energía y procura sobrevivir. ¡Cada partida cambia!</div>
+ </div>
+</section>
+<footer>Juego ficticio de entretenimiento. No representa procedimientos médicos ni reemplaza la capacitación clínica.</footer>
+</div>
+<script>
+(()=> {
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+const $=id=>document.getElementById(id);
+const keys={up:false,down:false,left:false,right:false,fire:false};
+let state='menu',player,bots=[],shots=[],enemyShots=[],medkits=[],particles=[],obstacles=[],elapsed=0,spawnTimer=0,medTimer=0,kills=0,gotMedkits=0,last=0,screenShake=0;
+const rnd=(a,b)=>a+Math.random()*(b-a),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const mouse={x:W/2,y:H/2,active:false,down:false};
+function arena(){
+ obstacles=[];
+ [[125,105,118,52,'tent'],[365,90,75,80,'crate'],[680,105,125,48,'tent'],[220,292,65,88,'crate'],[475,270,130,44,'tent'],[740,325,66,85,'crate'],[380,430,110,40,'tent'],[80,420,110,42,'tent'],[600,440,85,48,'crate']].forEach(s=>obstacles.push({x:s[0],y:s[1],w:s[2],h:s[3],type:s[4]}));
+}
+function freeSpot(radius=20){
+ for(let i=0;i<120;i++){const p={x:rnd(35,W-35),y:rnd(35,H-35)};if(obstacles.every(o=>p.x+radius<o.x||p.x-radius>o.x+o.w||p.y+radius<o.y||p.y-radius>o.y+o.h))return p}
+ return{x:W/2,y:H/2};
+}
+function init(){
+ arena();player={...freeSpot(),r:17,hp:100,maxHp:100,speed:215,angle:0,cooldown:0,character:$('character').value,invuln:0};
+ bots=[];shots=[];enemyShots=[];medkits=[];particles=[];elapsed=0;spawnTimer=.4;medTimer=3;kills=0;gotMedkits=0;screenShake=0;state='playing';
+ $('overlay').classList.add('hidden');updateHud();for(let i=0;i<4;i++)spawnBot();
+}
+function spawnBot(){
+ if(bots.length>10||state!=='playing')return;
+ let p=freeSpot(20),tries=0;while(dist(p,player)<190&&tries++<25)p=freeSpot(20);
+ bots.push({x:p.x,y:p.y,r:15,hp:2,maxHp:2,speed:rnd(48,70),cooldown:rnd(.6,1.6),angle:0,side:Math.random()<.5?-1:1});
+}
+function spawnMed(){const p=freeSpot(17);medkits.push({x:p.x,y:p.y,r:13,pulse:rnd(0,6)});}
+function collides(x,y,r,o){return x+r>o.x&&x-r<o.x+o.w&&y+r>o.y&&y-r<o.y+o.h}
+function moveEntity(e,dx,dy,r){
+ let nx=clamp(e.x+dx,r,W-r),ny=clamp(e.y+dy,r,H-r);
+ if(!obstacles.some(o=>collides(nx,e.y,r,o)))e.x=nx;
+ if(!obstacles.some(o=>collides(e.x,ny,r,o)))e.y=ny;
+}
+function shoot(owner,angle){
+ const isPlayer=owner===player,sp=isPlayer?450:220,arr=isPlayer?shots:enemyShots;
+ arr.push({x:owner.x+Math.cos(angle)*(owner.r+6),y:owner.y+Math.sin(angle)*(owner.r+6),vx:Math.cos(angle)*sp,vy:Math.sin(angle)*sp,r:isPlayer?5:4,life:1.5,damage:1});
+ if(isPlayer)for(let i=0;i<3;i++)particles.push({x:owner.x+Math.cos(angle)*20,y:owner.y+Math.sin(angle)*20,vx:rnd(-40,40),vy:rnd(-40,40),life:.12,color:'#ffe09a'});
+}
+function burst(x,y,color,n=9){for(let i=0;i<n;i++){let a=rnd(0,Math.PI*2),s=rnd(25,130);particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:rnd(.2,.6),color})}}
+function hitPlayer(dmg){if(player.invuln>0||state!=='playing')return;player.hp=Math.max(0,player.hp-dmg);player.invuln=.38;screenShake=5;burst(player.x,player.y,'#ffb5c8',8);updateHud();if(player.hp<=0)endGame(false)}
+function update(dt){
+ if(state!=='playing')return;elapsed+=dt;player.cooldown-=dt;player.invuln-=dt;spawnTimer-=dt;medTimer-=dt;screenShake=Math.max(0,screenShake-dt*12);
+ let dx=(keys.right?1:0)-(keys.left?1:0),dy=(keys.down?1:0)-(keys.up?1:0),mag=Math.hypot(dx,dy)||1;
+ moveEntity(player,dx/mag*player.speed*dt,dy/mag*player.speed*dt,player.r);
+ let target=null,td=Infinity;for(const b of bots){let d=dist(player,b);if(d<td){td=d;target=b}}
+ if(target&&!mouse.active)player.angle=Math.atan2(target.y-player.y,target.x-player.x);
+ if(mouse.active)player.angle=Math.atan2(mouse.y-player.y,mouse.x-player.x);
+ if((keys.fire||mouse.down)&&player.cooldown<=0){shoot(player,player.angle);player.cooldown=.19}
+ if(spawnTimer<=0&&bots.length<7){spawnBot();spawnTimer=1.35}
+ if(medTimer<=0&&medkits.length<3){spawnMed();medTimer=6.5}
+ for(let i=bots.length-1;i>=0;i--){
+  const b=bots[i],d=dist(b,player);b.angle=Math.atan2(player.y-b.y,player.x-b.x);b.cooldown-=dt;
+  let vx=0,vy=0;
+  if(d>155){vx=Math.cos(b.angle);vy=Math.sin(b.angle)}
+  else if(d<105){vx=-Math.cos(b.angle);vy=-Math.sin(b.angle)}
+  else{vx=Math.cos(b.angle+Math.PI/2*b.side)*.5;vy=Math.sin(b.angle+Math.PI/2*b.side)*.5}
+  moveEntity(b,vx*b.speed*dt,vy*b.speed*dt,b.r);
+  if(d<330&&b.cooldown<=0){shoot(b,b.angle+rnd(-.18,.18));b.cooldown=rnd(1.1,1.8)}
+  if(d<b.r+player.r+3)hitPlayer(9);
+ }
+ function updateBullets(arr,hostile){
+  for(let i=arr.length-1;i>=0;i--){
+   let s=arr[i];s.x+=s.vx*dt;s.y+=s.vy*dt;s.life-=dt;
+   let remove=s.life<=0||s.x<0||s.y<0||s.x>W||s.y>H||obstacles.some(o=>collides(s.x,s.y,s.r,o));
+   if(!remove&&hostile&&Math.hypot(s.x-player.x,s.y-player.y)<s.r+player.r){hitPlayer(7);remove=true}
+   if(!remove&&!hostile){for(let j=bots.length-1;j>=0;j--){const b=bots[j];if(Math.hypot(s.x-b.x,s.y-b.y)<s.r+b.r){b.hp-=1;burst(s.x,s.y,'#ffe4a7',3);remove=true;if(b.hp<=0){burst(b.x,b.y,'#b5f5d0',12);bots.splice(j,1);kills++;updateHud()}break}}}
+   if(remove)arr.splice(i,1);
+  }
+ }
+ updateBullets(shots,false);updateBullets(enemyShots,true);
+ for(let i=medkits.length-1;i>=0;i--){let m=medkits[i];m.pulse+=dt*4;if(dist(m,player)<m.r+player.r&&player.hp<100){player.hp=Math.min(100,player.hp+28);gotMedkits++;burst(m.x,m.y,'#79e2a4',12);medkits.splice(i,1);updateHud()}}
+ for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt;if(p.life<=0)particles.splice(i,1)}
+ updateHud();
+}
+function drawCharacter(x,y,r,kind,angle,hp,maxHp,blink=false){
+ ctx.save();ctx.translate(x,y);
+ // shadow
+ ctx.fillStyle='#10231d55';ctx.beginPath();ctx.ellipse(3,r*.8,r*1.15,r*.55,0,0,Math.PI*2);ctx.fill();
+ if(blink)ctx.globalAlpha=.45;
+ // coat/body and head
+ ctx.fillStyle=kind==='player'?(player.character==='medico'?'#eaf4ff':'#fff4f7'):'#dcece6';
+ ctx.beginPath();ctx.roundRect(-r*.75,-r*.1,r*1.5,r*1.45,7);ctx.fill();
+ ctx.strokeStyle=kind==='player'?'#7b294c':'#456f5d';ctx.lineWidth=2;ctx.stroke();
+ ctx.fillStyle='#c88967';ctx.beginPath();ctx.arc(0,-r*.7,r*.63,0,Math.PI*2);ctx.fill();
+ // hair cap
+ ctx.fillStyle=kind==='player'?(player.character==='medico'?'#34485b':'#613d4e'):'#3b4d42';
+ ctx.beginPath();ctx.arc(0,-r*.82,r*.62,Math.PI,Math.PI*2);ctx.fill();
+ // stethoscope detail / cross
+ ctx.strokeStyle='#548b9b';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,r*.28,r*.35,.2,2.8);ctx.stroke();
+ ctx.fillStyle='#b5456c';ctx.fillRect(-3,r*.15,6,2);ctx.fillRect(-1,r*.05,2,6);
+ // weapon/aim indicator
+ ctx.rotate(angle);ctx.fillStyle='#49525a';ctx.fillRect(r*.42,-3,r*.86,6);ctx.fillStyle='#9ca6ae';ctx.fillRect(r*.92,-2,r*.35,4);
+ ctx.restore();
+ if(kind==='bot'){
+  ctx.fillStyle='#462b3a';ctx.fillRect(x-r,y-r-11,r*2,4);ctx.fillStyle='#e46d82';ctx.fillRect(x-r,y-r-11,r*2*(hp/maxHp),4)
+ }
+}
+function draw(){
+ ctx.save();if(screenShake>0)ctx.translate(rnd(-screenShake,screenShake),rnd(-screenShake,screenShake));
+ // garden training arena
+ ctx.fillStyle='#6a2039';ctx.fillRect(0,0,W,H);
+ for(let y=0;y<H;y+=36)for(let x=0;x<W;x+=36){ctx.fillStyle=((x/36+y/36)%2===0)?'#7b2a45':'#70233d';ctx.fillRect(x,y,35,35)}
+ // dotted tactical markings
+ ctx.strokeStyle='#d99ab0';ctx.lineWidth=2;ctx.setLineDash([7,8]);ctx.strokeRect(18,18,W-36,H-36);ctx.setLineDash([]);
+ // pathways
+ ctx.fillStyle='#ad7184';ctx.fillRect(0,205,W,27);ctx.fillRect(430,0,27,H);
+ ctx.fillStyle='#542034';ctx.globalAlpha=.3;ctx.fillRect(0,207,W,3);ctx.fillRect(432,0,3,H);ctx.globalAlpha=1;
+ // arena props
+ obstacles.forEach(o=>{
+  ctx.fillStyle=o.type==='tent'?'#f2dce4':'#a85c77';ctx.strokeStyle=o.type==='tent'?'#8d3856':'#63243c';ctx.lineWidth=3;
+  ctx.beginPath();ctx.roundRect(o.x,o.y,o.w,o.h,8);ctx.fill();ctx.stroke();
+  if(o.type==='tent'){ctx.strokeStyle='#d7a0b3';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(o.x+12,o.y+o.h/2);ctx.lineTo(o.x+o.w-12,o.y+o.h/2);ctx.stroke();ctx.fillStyle='#800020';ctx.font='bold 13px system-ui';ctx.fillText('PUESTO',o.x+o.w/2-25,o.y+o.h/2-7)}
+  else{ctx.strokeStyle='#d48ca5';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(o.x+8,o.y+8);ctx.lineTo(o.x+o.w-8,o.y+o.h-8);ctx.moveTo(o.x+o.w-8,o.y+8);ctx.lineTo(o.x+8,o.y+o.h-8);ctx.stroke()}
+ });
+ medkits.forEach(m=>{ctx.save();ctx.translate(m.x,m.y);ctx.scale(1+Math.sin(m.pulse)*.08,1+Math.sin(m.pulse)*.08);ctx.fillStyle='#197b56';ctx.beginPath();ctx.arc(0,0,m.r+3,0,Math.PI*2);ctx.fill();ctx.fillStyle='#edfff4';ctx.fillRect(-3,-9,6,18);ctx.fillRect(-9,-3,18,6);ctx.restore()});
+ // subtle aim line
+ if(state==='playing'){ctx.strokeStyle='#ffd8e4aa';ctx.setLineDash([4,6]);ctx.beginPath();ctx.moveTo(player.x,player.y);ctx.lineTo(player.x+Math.cos(player.angle)*58,player.y+Math.sin(player.angle)*58);ctx.stroke();ctx.setLineDash([])}
+ shots.forEach(s=>{ctx.fillStyle='#fff0a4';ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill()});
+ enemyShots.forEach(s=>{ctx.fillStyle='#f07a91';ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill()});
+ bots.forEach(b=>drawCharacter(b.x,b.y,b.r,'bot',b.angle,b.hp,b.maxHp));
+ if(player)drawCharacter(player.x,player.y,player.r,'player',player.angle,100,100,player.invuln>0);
+ particles.forEach(p=>{ctx.globalAlpha=clamp(p.life*2,0,1);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1});
+ // labels
+ ctx.fillStyle='#fff0f5';ctx.font='bold 12px system-ui';ctx.fillText('ZONA DE ENTRENAMIENTO',28,36);
+ ctx.restore();
+}
+function updateHud(){
+ $('healthText').textContent=(player?Math.ceil(player.hp):100)+' / 100';$('healthFill').style.width=(player?player.hp:100)+'%';
+ $('healthFill').style.background=(player&&player.hp<35)?'#e15f76':'#4aa77c';$('kills').textContent=kills;$('medkits').textContent=gotMedkits;
+ let sec=Math.floor(elapsed);$('time').textContent=String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');
+}
+function endGame(won){
+ state='over';$('overlay').classList.remove('hidden');$('overlayTitle').textContent=won?'¡Arena superada!':'¡Fin de la partida!';
+ $('overlayText').textContent=`Tiempo: ${$('time').textContent}. Bots superados: ${kills}. Botiquines recogidos: ${gotMedkits}. ¡Vuelve a intentarlo para mejorar tu récord!`;
+ $('startBtn').style.display='none';$('restartBtn').style.display='inline-block';
+}
+function frame(ts){const dt=Math.min(.033,(ts-last)/1000||0);last=ts;update(dt);draw();requestAnimationFrame(frame)}
+function canvasPos(e){const rect=canvas.getBoundingClientRect();return{x:(e.clientX-rect.left)*W/rect.width,y:(e.clientY-rect.top)*H/rect.height}}
+canvas.addEventListener('pointermove',e=>{const p=canvasPos(e);mouse.x=p.x;mouse.y=p.y;mouse.active=true});
+canvas.addEventListener('pointerdown',e=>{if(state!=='playing')return;canvas.setPointerCapture?.(e.pointerId);const p=canvasPos(e);mouse.x=p.x;mouse.y=p.y;mouse.active=true;mouse.down=true});
+window.addEventListener('pointerup',()=>mouse.down=false);
+window.addEventListener('keydown',e=>{
+ const k=e.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();
+ if(k==='w'||k==='arrowup')keys.up=true;if(k==='s'||k==='arrowdown')keys.down=true;if(k==='a'||k==='arrowleft')keys.left=true;if(k==='d'||k==='arrowright')keys.right=true;if(k===' ')keys.fire=true;
+});
+window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();if(k==='w'||k==='arrowup')keys.up=false;if(k==='s'||k==='arrowdown')keys.down=false;if(k==='a'||k==='arrowleft')keys.left=false;if(k==='d'||k==='arrowright')keys.right=false;if(k===' ')keys.fire=false});
+document.querySelectorAll('[data-key]').forEach(btn=>{
+ const k=btn.dataset.key,down=e=>{e.preventDefault();keys[k]=true},up=e=>{e.preventDefault();keys[k]=false};
+ btn.addEventListener('pointerdown',down);btn.addEventListener('pointerup',up);btn.addEventListener('pointerleave',up);btn.addEventListener('pointercancel',up);
+});
+const fire=$('fireMobile');fire.addEventListener('pointerdown',e=>{e.preventDefault();keys.fire=true;mouse.active=false});['pointerup','pointerleave','pointercancel'].forEach(ev=>fire.addEventListener(ev,e=>{e.preventDefault();keys.fire=false}));
+$('startBtn').addEventListener('click',()=>{$('startBtn').style.display='inline-block';$('restartBtn').style.display='none';init()});
+$('restartBtn').addEventListener('click',()=>{$('startBtn').style.display='inline-block';$('restartBtn').style.display='none';init()});
+arena();player={...freeSpot(),r:17,hp:100,maxHp:100,angle:0,character:'obstetra',invuln:0};draw();requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
